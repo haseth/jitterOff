@@ -94,17 +94,21 @@ func NewCustomJitterOff(totalAttempt int, time1, time2 time.Duration) *JitterOff
 
 // Do the requested function with BackOff and Jitter Algorithm
 func (j *JitterOff) Do(request func() (interface{}, error)) (interface{}, error) {
+	var out interface{}
+	var err error
+	
 	rand.Seed(time.Now().UTC().UnixNano())
+	j.Reset()
 
 	for {
-		out, err := request()
+		out, err = request()
 		if err == nil {
 			return out, nil
 		}
 
 		j.attempt++
 		if j.attempt >= j.maxAttempt {
-			return out, err
+			break
 		}
 
 		// Back-off with jitter
@@ -114,7 +118,13 @@ func (j *JitterOff) Do(request func() (interface{}, error)) (interface{}, error)
 		time.Sleep(j.backOffTime)
 	}
 
-	return nil, nil
+	return out, err
+}
+
+// Reset resets the timer values of jitter
+func (j *JitterOff) Reset() {
+	j.attempt = 0
+	j.backOffTime = 0
 }
 
 func minimum(a, b time.Duration) time.Duration {

@@ -78,6 +78,20 @@ func TestExecute_DefaultSetting(t *testing.T) {
 	assert.Equal(t, j.attempt, j.maxAttempt, "Max retries reached")
 	assert.Greater(t, int(j.backOffTime), int(j.minTime), "No retry required for successful call")
 	assert.LessOrEqual(t, int(j.backOffTime), int(200*time.Millisecond), "No retry required for successful call")
+
+	/*
+		Test-4
+		One more success call after fail call 
+		timer and num of attempts should be resetted.
+	*/
+
+	// TEST
+	_, err = j.Do(doSuccessCall())
+
+	// VALIDATE
+	assert.Nil(t, err, "Function able to perform the task timely")
+	assert.Equal(t, j.attempt, 0, "No retry required for successful call")
+	assert.Equal(t, j.backOffTime, time.Duration(0), "BackOff time is resetted")
 }
 
 func TestExecute_CustomSetting(t *testing.T) {
@@ -122,6 +136,40 @@ func TestExecute_CustomSetting(t *testing.T) {
 	assert.Equal(t, j.attempt, totalAttempt, "Max retries reached")
 	assert.GreaterOrEqual(t, int(j.backOffTime), int(time1), "No retry required for successful call")
 	assert.LessOrEqual(t, int(j.backOffTime), int(time2), "No retry required for successful call")
+
+	/*
+		Test-4
+		One more success call after fail call 
+		timer and num of attempts should be resetted.
+	*/
+
+	// TEST
+	_, err = j.Do(doSuccessCall())
+
+	// VALIDATE
+	assert.Nil(t, err, "Function able to perform the task timely")
+	assert.Equal(t, j.attempt, 0, "No retry required for successful call")
+	assert.Equal(t, j.backOffTime, time.Duration(0), "Backoff time should be resetted to 0")
+
+}
+
+func TestReset(t *testing.T){
+	/*	
+		Test to verify if reset successfully resets the 
+		number of attempts and back-off time. 
+	*/
+	j := NewDefaultJitterOff()
+	assert.Equal(t, j.attempt, 0, "Correct attempts configured ")
+
+	j.attempt=2
+	j.backOffTime=time.Duration(time.Second)
+	assert.Equal(t, j.attempt, 2, "Attempts correctly changed")
+	assert.Equal(t, j.backOffTime, time.Duration(time.Second), "BackOff Time updated correctly")
+
+	// TEST by resetting the timers and attempts
+	j.Reset()
+	assert.Equal(t, j.attempt, 0, "Attempts correctly changed")
+	assert.Equal(t, j.backOffTime, time.Duration(0), "BackOff Time updated correctly")
 }
 
 // HELPER
